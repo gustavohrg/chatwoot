@@ -182,19 +182,46 @@ No separate host-run acceptance flow is required for this guide.
 
 Do not change the VPS stack until the local Swarm flow passes.
 
-Build a pinned production image, for example:
+Production deploy assets in this repo:
+
+- `deployment/portainer/chatwoot-assigned-only.production.stack.yml`
+- `deployment/portainer/chatwoot-assigned-only.production.env.example`
+- `.github/workflows/publish_assigned_only_ghcr.yml`
+
+### Publish the production image
+
+Freeze production first and build from that exact upstream version, not from `latest`.
+
+Then publish a pinned production image, for example:
 
 ```text
 ghcr.io/gustavohrg/chatwoot:<prod-tag>-assigned-only-v1
 ```
 
-Update the Portainer stack:
+Recommended path:
+
+1. Push this branch to GitHub.
+2. Open GitHub Actions.
+3. Run `Publish Assigned-Only Image to GHCR`.
+4. Choose the exact branch or tag that matches the production freeze.
+5. Set `image_tag` to something version-pinned such as `<prod-tag>-assigned-only-v1`.
+6. Keep `platforms` as `linux/amd64` unless you explicitly need multi-arch images.
+
+Make sure Portainer can pull the GHCR image:
+
+- either make the GHCR package public
+- or add GHCR registry credentials in Portainer and attach them to the stack pull
+
+### Update the Portainer stack
+
+Your current stack editor content should change in these exact ways:
 
 - replace `chatwoot/chatwoot:latest` with the pinned custom image tag
 - add `CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true`
 - replace `ENABLE_FORCE_SSL=true` with `FORCE_SSL=true`
 - set the `internal` overlay network to `attachable: true`
 - keep the existing Traefik labels and service names intact
+- keep the same Postgres, Redis, volumes, and external `zirenet` network
 
 Relevant production snippet:
 
@@ -205,6 +232,47 @@ x-base: &base
     - FORCE_SSL=true
     - CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true
 ```
+
+For your current Portainer stack, the exact stack-level diff is:
+
+```diff
+ x-base: &base
+-  image: chatwoot/chatwoot:latest
++  image: ghcr.io/gustavohrg/chatwoot:<prod-tag>-assigned-only-v1
+   environment:
+@@
+-    - ENABLE_FORCE_SSL=true
++    - FORCE_SSL=true
++    - CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true
+@@
+ networks:
+   zirenet:
+     external: true
+   internal:
+     driver: overlay
++    attachable: true
+```
+
+Use the provided template at `deployment/portainer/chatwoot-assigned-only.production.stack.yml` as the source of truth for the stack editor.
+
+### Update the Portainer env values
+
+Add these values to the Portainer environment editor:
+
+```text
+CHATWOOT_IMAGE=ghcr.io/gustavohrg/chatwoot:<prod-tag>-assigned-only-v1
+CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true
+```
+
+Keep your existing production secrets and SMTP settings unchanged unless you intend to rotate them.
+
+### Migration note
+
+This assigned-only fork does not add database migrations.
+
+If you build from the exact same Chatwoot version already running in production, this feature rollout is an image swap plus env update only. No separate `db:chatwoot_prepare` step is required for this patch itself.
+
+If you later upgrade Chatwoot to a newer upstream version, follow the normal Chatwoot upgrade process and run the matching database preparation step for that upgrade.
 
 ## 7. Rollback
 
