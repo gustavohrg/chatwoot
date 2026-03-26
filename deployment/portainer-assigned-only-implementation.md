@@ -4,6 +4,8 @@
 
 Ship a small Chatwoot fork that restricts non-admin agents to their own assigned conversations, validates the behavior in a local single-node Docker Swarm, and only then promotes a pinned custom image to Portainer.
 
+This guide uses Docker only for local validation. Do not treat host-level `pnpm dev`, `overmind`, or direct non-container app runs as part of the acceptance flow for this feature.
+
 ## 1. Freeze Production First
 
 Do not build from this fork's `develop` branch and do not keep using `chatwoot/chatwoot:latest`.
@@ -80,6 +82,16 @@ It uses:
 - named volumes for storage, Redis, and Postgres
 - an overlay `internal` network with `attachable: true`
 - a locally published Rails port instead of Traefik
+- containerized bootstrap and validation only
+
+### Docker-only rule
+
+For this feature, the local test environment is the Swarm stack only.
+
+- start the app through `docker stack deploy`
+- run bootstrap and seed commands through `docker exec`
+- verify behavior through the browser against the running containers
+- do not use host-run `rails s`, `sidekiq`, `pnpm dev`, or `overmind` as the test path
 
 ### Local files
 
@@ -90,9 +102,9 @@ It uses:
 ### Build and deploy flow
 
 1. Create a local env file from the example and adjust secrets.
-2. Build and push the custom image to the local registry.
+2. Build and push the custom image to the local registry from `docker/Dockerfile`.
 3. Deploy the Swarm stack.
-4. Run `bundle exec rails db:chatwoot_prepare` inside the running Rails container.
+4. Run `bundle exec rails db:chatwoot_prepare` through `docker exec` inside the running Rails container.
 5. Open the locally published URL and create the first admin user.
 
 Example:
@@ -101,6 +113,8 @@ Example:
 cp deployment/swarm/chatwoot-local-assigned-only.env.example deployment/swarm/chatwoot-local-assigned-only.env
 script/chatwoot-local-swarm.sh
 ```
+
+All follow-up actions in this guide assume the stack is already running and are executed against that stack.
 
 ## 5. QA Matrix
 
@@ -121,20 +135,48 @@ Then verify the toggle-off baseline:
 - redeploy locally
 - confirm stock community behavior is unchanged
 
+These checks are Docker-only acceptance checks. Do not substitute them with direct host-level app runs.
+
 ### Suggested local seed flow
 
 After the first admin account exists:
 
 ```bash
 docker exec -it $(docker ps --filter label=com.docker.swarm.service.name=chatwoot-local_rails -q | head -n1) \
-  bundle exec rails runner "Seeders::AccountSeeder.new(account: Account.last).perform!"
+  bundle exec rails runner "Seeders::AssignedOnlyDemoSeeder.new(account: Account.last).perform!"
 ```
 
-Then create two agents and manually ensure the account contains:
+The minimal demo seed resets the account to the smallest useful assigned-only scenario:
 
-- one conversation assigned to Agent A
-- one conversation assigned to Agent B
-- one unassigned conversation
+- one inbox: `Assigned Only Demo Inbox`
+- one existing administrator kept on the account
+- two agent users
+- three conversations total:
+  - one assigned to Agent A
+  - one assigned to Agent B
+  - one unassigned
+
+Demo logins:
+
+- Agent A: `agent.a@assigned-only.demo.test`
+- Agent B: `agent.b@assigned-only.demo.test`
+- Password for both: `Password1!.`
+
+### Docker-only acceptance sequence
+
+1. Deploy the stack with `script/chatwoot-local-swarm.sh`.
+2. Open `http://localhost:<RAILS_PORT>` in the browser.
+3. Create the first admin user.
+4. Seed the minimal demo data through `docker exec`.
+5. Log in as `agent.a@assigned-only.demo.test` with password `Password1!.`.
+6. Confirm Agent A sees exactly one conversation in `My Conversations`.
+7. Log in as `agent.b@assigned-only.demo.test` with password `Password1!.`.
+8. Confirm Agent B sees exactly one conversation in `My Conversations`.
+9. Log in as the admin and confirm the admin sees all three conversations.
+10. From the admin session, copy a conversation URL for Agent B and confirm Agent A cannot open it directly.
+11. Verify search does not expose the other agent's conversation or the unassigned conversation.
+
+No separate host-run acceptance flow is required for this guide.
 
 ## 6. Portainer Rollout
 
