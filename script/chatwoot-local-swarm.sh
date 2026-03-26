@@ -8,9 +8,12 @@ REGISTRY_NAME="${REGISTRY_NAME:-chatwoot-local-registry}"
 REGISTRY_PORT="${REGISTRY_PORT:-5000}"
 ENV_FILE="${ENV_FILE:-${ROOT_DIR}/deployment/swarm/chatwoot-local-assigned-only.env}"
 STACK_FILE="${STACK_FILE:-${ROOT_DIR}/deployment/swarm/chatwoot-local-assigned-only.stack.yml}"
+DOCKERFILE_PATH="${DOCKERFILE_PATH:-${ROOT_DIR}/docker/Dockerfile}"
 IMAGE_REPO="${IMAGE_REPO:-localhost:${REGISTRY_PORT}/chatwoot}"
 IMAGE_TAG="${IMAGE_TAG:-local-assigned-only}"
-CHATWOOT_IMAGE="${CHATWOOT_IMAGE:-${IMAGE_REPO}:${IMAGE_TAG}}"
+DEFAULT_CHATWOOT_IMAGE="${IMAGE_REPO}:${IMAGE_TAG}"
+CHATWOOT_IMAGE="${CHATWOOT_IMAGE:-}"
+GIT_SHA="${GIT_SHA:-$(git -C "${ROOT_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)}"
 
 require_file() {
   local path="$1"
@@ -18,6 +21,22 @@ require_file() {
     echo "Missing required file: ${path}" >&2
     exit 1
   fi
+}
+
+load_env_file() {
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    [[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
+
+    local key="${line%%=*}"
+    local value="${line#*=}"
+
+    key="${key#"${key%%[![:space:]]*}"}"
+    key="${key%"${key##*[![:space:]]}"}"
+
+    export "${key}=${value}"
+  done < "${ENV_FILE}"
+
+  CHATWOOT_IMAGE="${CHATWOOT_IMAGE:-${DEFAULT_CHATWOOT_IMAGE}}"
 }
 
 ensure_swarm() {
@@ -49,6 +68,8 @@ ensure_registry() {
 build_and_push_image() {
   docker buildx build \
     --platform linux/amd64 \
+    --file "${DOCKERFILE_PATH}" \
+    --build-arg "GIT_SHA=${GIT_SHA}" \
     --tag "${CHATWOOT_IMAGE}" \
     --push \
     "${ROOT_DIR}"
@@ -104,22 +125,24 @@ Local Swarm stack deployed.
 
 Open: http://localhost:$(grep '^RAILS_PORT=' "${ENV_FILE}" | cut -d'=' -f2)
 
-Create the first admin account in the browser, then seed richer sample data with:
+Create the first admin account in the browser, then seed the minimal assigned-only demo data with:
 
 docker exec -it \$(docker ps --filter label=com.docker.swarm.service.name=${STACK_NAME}_rails -q | head -n1) \\
-  bundle exec rails runner "Seeders::AccountSeeder.new(account: Account.last).perform!"
+  bundle exec rails runner "Seeders::AssignedOnlyDemoSeeder.new(account: Account.last).perform!"
 
 Recommended verification:
-1. Create Agent A and Agent B.
-2. Ensure the account has one conversation assigned to each agent plus one unassigned conversation.
-3. Log in as Agent A and confirm only Agent A's assigned conversations are visible.
-4. Verify direct URL access, search, and bulk actions do not expose Agent B or unassigned conversations.
+1. Log in as Agent A with agent.a@assigned-only.demo.test / Password1!.
+2. Log in as Agent B with agent.b@assigned-only.demo.test / Password1!.
+3. Confirm there is one conversation for each agent and one unassigned conversation in a single inbox.
+4. Verify direct URL access, search, and bulk actions do not expose the other agent's conversation or the unassigned conversation.
 EOF
 }
 
 main() {
   require_file "${ENV_FILE}"
   require_file "${STACK_FILE}"
+  require_file "${DOCKERFILE_PATH}"
+  load_env_file
   ensure_swarm
   ensure_registry
   build_and_push_image
