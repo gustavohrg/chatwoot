@@ -14,6 +14,8 @@ class ConversationPolicy < ApplicationPolicy
   private
 
   def agent_can_view_conversation?
+    return assigned_to_user? if restrict_agents_to_assigned_conversations?
+
     inbox_access? || team_access?
   end
 
@@ -41,6 +43,10 @@ class ConversationPolicy < ApplicationPolicy
 
   def participant?
     record.conversation_participants.exists?(user_id: user.id)
+  end
+
+  def restrict_agents_to_assigned_conversations?
+    ChatwootApp.restrict_agents_to_assigned_conversations? && account_user&.agent?
   end
 end
 

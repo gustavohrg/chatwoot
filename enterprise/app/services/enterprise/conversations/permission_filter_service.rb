@@ -1,5 +1,6 @@
 module Enterprise::Conversations::PermissionFilterService
   def perform
+    return conversations.assigned_to(user) if restrict_agents_to_assigned_conversations?
     return filter_by_permissions(permissions) if user_has_custom_role?
 
     super

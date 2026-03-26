@@ -47,6 +47,12 @@ module ChatwootApp
     enterprise? && ENV.fetch('OPENSEARCH_URL', nil).present?
   end
 
+  def self.restrict_agents_to_assigned_conversations?
+    ActiveModel::Type::Boolean.new.cast(
+      ENV.fetch('CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS', false)
+    )
+  end
+
   def self.otel_enabled?
     otel_provider = InstallationConfig.find_by(name: 'OTEL_PROVIDER')&.value
     secret_key = InstallationConfig.find_by(name: 'LANGFUSE_SECRET_KEY')&.value

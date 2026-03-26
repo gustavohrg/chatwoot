@@ -195,6 +195,37 @@ RSpec.describe 'Api::V1::Accounts::BulkActionsController', type: :request do
         expect(Conversation.first.label_list).to contain_exactly('support', 'priority_customer')
         expect(Conversation.second.label_list).to contain_exactly('support', 'priority_customer')
       end
+
+      it 'ignores conversations not assigned to the agent when assigned-only restriction is enabled' do
+        my_conversation = Conversation.first
+        other_conversation = Conversation.second
+        unassigned_conversation = Conversation.third
+
+        my_conversation.update!(assignee: agent)
+        other_conversation.update!(assignee: agent_1)
+
+        [my_conversation, other_conversation, unassigned_conversation].uniq(&:inbox_id).each do |conversation|
+          create(:inbox_member, inbox: conversation.inbox, user: agent)
+        end
+
+        with_modified_env CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS: 'true' do
+          perform_enqueued_jobs do
+            post "/api/v1/accounts/#{account.id}/bulk_actions",
+                 headers: agent.create_new_auth_token,
+                 params: {
+                   type: 'Conversation',
+                   fields: { status: 'snoozed' },
+                   ids: [my_conversation.display_id, other_conversation.display_id, unassigned_conversation.display_id]
+                 }
+
+            expect(response).to have_http_status(:success)
+          end
+        end
+
+        expect(my_conversation.reload.status).to eq('snoozed')
+        expect(other_conversation.reload.status).to eq('open')
+        expect(unassigned_conversation.reload.status).to eq('open')
+      end
     end
   end
 

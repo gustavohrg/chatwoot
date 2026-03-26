@@ -8,7 +8,8 @@ class Conversations::PermissionFilterService
   end
 
   def perform
-    return conversations if user_role == 'administrator'
+    return conversations if administrator?
+    return conversations.assigned_to(user) if restrict_agents_to_assigned_conversations?
 
     accessible_conversations
   end
@@ -21,6 +22,14 @@ class Conversations::PermissionFilterService
 
   def account_user
     AccountUser.find_by(account_id: account.id, user_id: user.id)
+  end
+
+  def administrator?
+    user_role == 'administrator'
+  end
+
+  def restrict_agents_to_assigned_conversations?
+    ChatwootApp.restrict_agents_to_assigned_conversations? && user_role == 'agent'
   end
 
   def user_role

@@ -45,6 +45,22 @@ RSpec.describe Enterprise::Conversations::PermissionFilterService do
         expect(result).not_to include(another_inbox_conversation)
         expect(result.count).to eq(3)
       end
+
+      it 'returns only the agent assigned conversations when assigned-only restriction is enabled' do
+        custom_role = create(:custom_role, account: account, permissions: ['conversation_manage'])
+        account_user = AccountUser.find_by(user: agent, account: account)
+        account_user.update!(role: :agent, custom_role: custom_role)
+
+        with_modified_env CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS: 'true' do
+          result = Conversations::PermissionFilterService.new(
+            account.conversations,
+            agent,
+            account
+          ).perform
+
+          expect(result).to contain_exactly(assigned_conversation)
+        end
+      end
     end
 
     context 'when user has conversation_manage permission' do
