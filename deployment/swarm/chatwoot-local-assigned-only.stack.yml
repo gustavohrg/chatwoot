@@ -1,0 +1,104 @@
+version: "3.8"
+
+x-base: &base
+  image: ${CHATWOOT_IMAGE}
+  env_file:
+    - ./chatwoot-local-assigned-only.env
+  environment:
+    - FRONTEND_URL=${FRONTEND_URL}
+    - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+    - POSTGRES_DATABASE=${POSTGRES_DATABASE}
+    - POSTGRES_USERNAME=${POSTGRES_USERNAME}
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    - POSTGRES_HOST=${POSTGRES_HOST}
+    - REDIS_PASSWORD=${REDIS_PASSWORD}
+    - REDIS_URL=${REDIS_URL}
+    - NODE_ENV=${NODE_ENV}
+    - RAILS_ENV=${RAILS_ENV}
+    - INSTALLATION_ENV=${INSTALLATION_ENV}
+    - FORCE_SSL=${FORCE_SSL}
+    - ENABLE_ACCOUNT_SIGNUP=${ENABLE_ACCOUNT_SIGNUP}
+    - ENABLE_ACCOUNT_SEEDING=${ENABLE_ACCOUNT_SEEDING}
+    - CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=${CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS}
+    - MAILER_SENDER_EMAIL=${MAILER_SENDER_EMAIL}
+    - SMTP_ADDRESS=${SMTP_ADDRESS}
+    - SMTP_PORT=${SMTP_PORT}
+    - SMTP_USERNAME=${SMTP_USERNAME}
+    - SMTP_PASSWORD=${SMTP_PASSWORD}
+    - SMTP_DOMAIN=${SMTP_DOMAIN}
+    - SMTP_AUTHENTICATION=${SMTP_AUTHENTICATION}
+    - SMTP_ENABLE_STARTTLS_AUTO=${SMTP_ENABLE_STARTTLS_AUTO}
+    - SMTP_TLS=${SMTP_TLS}
+    - SMTP_SSL=${SMTP_SSL}
+  volumes:
+    - storage_data:/app/storage
+  networks:
+    - internal
+
+services:
+  rails:
+    <<: *base
+    depends_on:
+      - chatwoot-postgres
+      - chatwoot-redis
+    entrypoint: docker/entrypoints/rails.sh
+    command: ["bundle", "exec", "rails", "s", "-p", "3000", "-b", "0.0.0.0"]
+    ports:
+      - target: 3000
+        published: ${RAILS_PORT}
+        protocol: tcp
+        mode: ingress
+    deploy:
+      restart_policy:
+        condition: any
+
+  sidekiq:
+    <<: *base
+    depends_on:
+      - chatwoot-postgres
+      - chatwoot-redis
+    command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+    deploy:
+      restart_policy:
+        condition: any
+
+  chatwoot-postgres:
+    image: pgvector/pgvector:pg16
+    env_file:
+      - ./chatwoot-local-assigned-only.env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DATABASE}
+      - POSTGRES_USER=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - chatwoot_postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    deploy:
+      restart_policy:
+        condition: any
+
+  chatwoot-redis:
+    image: redis:alpine
+    env_file:
+      - ./chatwoot-local-assigned-only.env
+    command: ["sh", "-c", "redis-server --requirepass \"$$REDIS_PASSWORD\""]
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - chatwoot_redis_data:/data
+    networks:
+      - internal
+    deploy:
+      restart_policy:
+        condition: any
+
+volumes:
+  storage_data:
+  chatwoot_postgres_data:
+  chatwoot_redis_data:
+
+networks:
+  internal:
+    driver: overlay
+    attachable: true

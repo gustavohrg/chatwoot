@@ -138,6 +138,22 @@ describe SearchService do
         end
       end
 
+      it 'returns only the agent assigned conversation messages when assigned-only restriction is enabled' do
+        other_agent = create(:user, account: account, role: :agent)
+        my_conversation = create(:conversation, account: account, inbox: inbox, assignee: user)
+        other_conversation = create(:conversation, account: account, inbox: inbox, assignee: other_agent)
+        my_message = create(:message, account: account, inbox: inbox, conversation: my_conversation, content: 'restricted wizard mine')
+        create(:message, account: account, inbox: inbox, conversation: other_conversation, content: 'restricted wizard other')
+        create(:message, account: account, inbox: inbox, content: 'restricted wizard unassigned')
+
+        with_modified_env CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS: 'true' do
+          params = { q: 'restricted wizard' }
+          search = described_class.new(current_user: user, current_account: account, params: params, search_type: 'Message')
+
+          expect(search.perform[:messages].map(&:id)).to eq([my_message.id])
+        end
+      end
+
       # rubocop:disable RSpec/MultipleMemoizedHelpers
       context 'when filtering messages with time, sender, and inbox', :opensearch do
         let!(:agent) { create(:user, account: account) }
@@ -258,6 +274,23 @@ describe SearchService do
         params = { q: new_converstion.display_id }
         search = described_class.new(current_user: user, current_account: account, params: params, search_type: 'Conversation')
         expect(search.perform[:conversations].map(&:id)).to include new_converstion.id
+      end
+
+      it 'returns only the agent assigned conversations when assigned-only restriction is enabled' do
+        other_agent = create(:user, account: account, role: :agent)
+        my_contact = create(:contact, account_id: account.id, name: 'Restricted Potter', email: 'mine@test.com')
+        other_contact = create(:contact, account_id: account.id, name: 'Restricted Potter', email: 'other@test.com')
+        unassigned_contact = create(:contact, account_id: account.id, name: 'Restricted Potter', email: 'none@test.com')
+        my_conversation = create(:conversation, contact: my_contact, inbox: inbox, account: account, assignee: user)
+        create(:conversation, contact: other_contact, inbox: inbox, account: account, assignee: other_agent)
+        create(:conversation, contact: unassigned_contact, inbox: inbox, account: account, assignee: nil)
+
+        with_modified_env CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS: 'true' do
+          params = { q: 'Restricted Potter' }
+          search = described_class.new(current_user: user, current_account: account, params: params, search_type: 'Conversation')
+
+          expect(search.perform[:conversations].map(&:id)).to eq([my_conversation.id])
+        end
       end
     end
 

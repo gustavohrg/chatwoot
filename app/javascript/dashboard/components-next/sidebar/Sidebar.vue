@@ -12,6 +12,7 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useWindowSize, useEventListener } from '@vueuse/core';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
+import { useConfig } from 'dashboard/composables/useConfig';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import SidebarGroup from './SidebarGroup.vue';
@@ -54,6 +55,13 @@ const isMobile = computed(() => windowWidth.value < 768);
 const accountId = useMapGetter('getCurrentAccountId');
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
+);
+const currentUserRole = useMapGetter('getCurrentRole');
+const { restrictAgentsToAssignedConversations } = useConfig();
+
+const isAssignedOnlyRestrictedAgent = computed(
+  () =>
+    restrictAgentsToAssignedConversations && currentUserRole.value === 'agent'
 );
 
 const hasAdvancedAssignment = computed(() => {
@@ -240,22 +248,28 @@ const menuItems = computed(() => {
       children: [
         {
           name: 'All',
-          label: t('SIDEBAR.ALL_CONVERSATIONS'),
+          label: isAssignedOnlyRestrictedAgent.value
+            ? t('SIDEBAR.MY_CONVERSATIONS')
+            : t('SIDEBAR.ALL_CONVERSATIONS'),
           activeOn: ['inbox_conversation'],
           to: accountScopedRoute('home'),
         },
-        {
-          name: 'Mentions',
-          label: t('SIDEBAR.MENTIONED_CONVERSATIONS'),
-          activeOn: ['conversation_through_mentions'],
-          to: accountScopedRoute('conversation_mentions'),
-        },
-        {
-          name: 'Unattended',
-          activeOn: ['conversation_through_unattended'],
-          label: t('SIDEBAR.UNATTENDED_CONVERSATIONS'),
-          to: accountScopedRoute('conversation_unattended'),
-        },
+        ...(!isAssignedOnlyRestrictedAgent.value
+          ? [
+              {
+                name: 'Mentions',
+                label: t('SIDEBAR.MENTIONED_CONVERSATIONS'),
+                activeOn: ['conversation_through_mentions'],
+                to: accountScopedRoute('conversation_mentions'),
+              },
+              {
+                name: 'Unattended',
+                activeOn: ['conversation_through_unattended'],
+                label: t('SIDEBAR.UNATTENDED_CONVERSATIONS'),
+                to: accountScopedRoute('conversation_unattended'),
+              },
+            ]
+          : []),
         {
           name: 'Folders',
           label: t('SIDEBAR.CUSTOM_VIEWS_FOLDER'),

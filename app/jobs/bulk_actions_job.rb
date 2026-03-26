@@ -61,6 +61,15 @@ class BulkActionsJob < ApplicationJob
     current_model = @params[:type].camelcase
     return unless MODEL_TYPE.include?(current_model)
 
-    current_model.constantize&.where(account_id: @account.id, display_id: ids)
+    records = current_model.constantize&.where(account_id: @account.id, display_id: ids)
+    return records unless restrict_agents_to_assigned_conversations?
+
+    Conversations::PermissionFilterService.new(records, Current.user, @account).perform
+  end
+
+  def restrict_agents_to_assigned_conversations?
+    return false unless ChatwootApp.restrict_agents_to_assigned_conversations?
+
+    @account.account_users.find_by(user: Current.user)&.agent?
   end
 end

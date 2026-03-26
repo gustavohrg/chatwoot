@@ -31,9 +31,8 @@ class SearchService
   end
 
   def filter_conversations
-    conversations_query = current_account.conversations.where(inbox_id: accessable_inbox_ids)
-                                         .joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
-                                         .where("cast(conversations.display_id as text) ILIKE :search OR contacts.name ILIKE :search OR contacts.email
+    conversations_query = conversation_search_scope.joins('INNER JOIN contacts ON conversations.contact_id = contacts.id')
+                                                   .where("cast(conversations.display_id as text) ILIKE :search OR contacts.name ILIKE :search OR contacts.email
                             ILIKE :search OR contacts.phone_number ILIKE :search OR contacts.identifier ILIKE :search", search: "%#{search_query}%")
 
     if current_account.feature_enabled?('advanced_search')
@@ -107,6 +106,7 @@ class SearchService
   def message_base_query
     query = current_account.messages.where('created_at >= ?', 3.months.ago)
     query = query.where(inbox_id: accessable_inbox_ids) unless should_skip_inbox_filtering?
+    query = query.where(conversation_id: permitted_conversations.select(:id)) if restrict_agents_to_assigned_conversations?
     query
   end
 
@@ -150,7 +150,7 @@ class SearchService
   end
 
   def should_skip_inbox_filtering?
-    account_user.administrator? || user_has_access_to_all_inboxes?
+    account_user&.administrator? || user_has_access_to_all_inboxes?
   end
 
   def user_has_access_to_all_inboxes?
@@ -159,6 +159,28 @@ class SearchService
 
   def use_gin_search
     current_account.feature_enabled?('search_with_gin')
+  end
+
+  def conversation_search_scope
+    return permitted_conversations if restrict_agents_to_assigned_conversations?
+
+    current_account.conversations.where(inbox_id: accessable_inbox_ids)
+  end
+
+  def permitted_conversations
+    @permitted_conversations ||= Conversations::PermissionFilterService.new(
+      current_account.conversations,
+      current_user,
+      current_account
+    ).perform
+  end
+
+  def permitted_conversation_ids
+    @permitted_conversation_ids ||= permitted_conversations.pluck(:id)
+  end
+
+  def restrict_agents_to_assigned_conversations?
+    ChatwootApp.restrict_agents_to_assigned_conversations? && account_user&.agent?
   end
 
   def filter_contacts

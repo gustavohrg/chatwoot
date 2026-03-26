@@ -61,5 +61,21 @@ RSpec.describe ConversationPolicy, type: :policy do
         expect(subject).not_to permit(context, conversation)
       end
     end
+
+    context 'when assigned-only restriction is enabled' do
+      let(:custom_role) { create(:custom_role, account: account, permissions: ['conversation_unassigned_manage']) }
+
+      before do
+        agent_account_user.update!(role: :agent, custom_role: custom_role)
+      end
+
+      it 'denies access to unassigned conversations even when the custom role allows them' do
+        conversation = create(:conversation, account: account, inbox: inbox, assignee: nil)
+
+        with_modified_env CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS: 'true' do
+          expect(subject).not_to permit(context, conversation)
+        end
+      end
+    end
   end
 end

@@ -18,6 +18,7 @@ module Enterprise::SearchService
   def build_where_conditions
     conditions = { account_id: current_account.id }
     conditions[:inbox_id] = accessable_inbox_ids unless should_skip_inbox_filtering?
+    conditions[:conversation_id] = permitted_conversation_ids if restrict_agents_to_assigned_conversations?
     conditions
   end
 

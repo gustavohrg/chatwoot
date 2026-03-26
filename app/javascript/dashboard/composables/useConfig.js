@@ -1,3 +1,5 @@
+import { parseBoolean } from '@chatwoot/utils';
+
 /**
  * A function that provides access to various configuration values.
  * @returns {Object} An object containing configuration values.
@@ -27,7 +29,7 @@ export function useConfig() {
    * Indicates whether the current instance is an enterprise version.
    * @type {boolean}
    */
-  const isEnterprise = config.isEnterprise === 'true';
+  const isEnterprise = parseBoolean(config.isEnterprise);
 
   /**
    * The name of the enterprise plan, if applicable.
@@ -36,11 +38,20 @@ export function useConfig() {
    */
   const enterprisePlanName = config.enterprisePlanName;
 
+  /**
+   * Restricts non-admin agents to self-assigned conversations only.
+   * @type {boolean}
+   */
+  const restrictAgentsToAssignedConversations = parseBoolean(
+    config.restrictAgentsToAssignedConversations
+  );
+
   return {
     hostURL,
     vapidPublicKey,
     enabledLanguages,
     isEnterprise,
     enterprisePlanName,
+    restrictAgentsToAssignedConversations,
   };
 }
