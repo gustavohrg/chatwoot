@@ -35,7 +35,11 @@ const isRestrictedAssignedOnlyAgent = rootGetters => {
     window.chatwootConfig?.restrictAgentsToAssignedConversations
   );
 
-  return isRestricted && rootGetters?.getCurrentRole === 'agent';
+  return (
+    isRestricted &&
+    rootGetters?.getCurrentRole === 'agent' &&
+    !rootGetters?.getCurrentCustomRoleId
+  );
 };
 
 const isAssignedToCurrentUser = (conversation, rootGetters) => {

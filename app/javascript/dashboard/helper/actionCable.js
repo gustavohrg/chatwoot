@@ -153,6 +153,10 @@ class ActionCableConnector extends BaseActionCableConnector {
       return false;
     }
 
+    if (this.app.$store.getters.getCurrentCustomRoleId) {
+      return false;
+    }
+
     const currentUserId = Number(this.app.$store.getters.getCurrentUserID);
     const assigneeId = Number(
       conversation?.assignee_id || conversation?.meta?.assignee?.id

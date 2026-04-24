@@ -13,6 +13,11 @@ import { useWindowSize, useEventListener } from '@vueuse/core';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { useConfig } from 'dashboard/composables/useConfig';
+import {
+  hasPermissions,
+  getUserPermissions,
+} from 'dashboard/helper/permissionsHelper';
+import { CONVERSATION_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import SidebarGroup from './SidebarGroup.vue';
@@ -53,15 +58,30 @@ const { width: windowWidth } = useWindowSize();
 const isMobile = computed(() => windowWidth.value < 768);
 
 const accountId = useMapGetter('getCurrentAccountId');
+const currentUser = useMapGetter('getCurrentUser');
+const currentCustomRoleId = useMapGetter('getCurrentCustomRoleId');
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
 );
 const currentUserRole = useMapGetter('getCurrentRole');
 const { restrictAgentsToAssignedConversations } = useConfig();
 
+const userPermissions = computed(() =>
+  getUserPermissions(currentUser.value, accountId.value)
+);
+
+const canAccessInboxView = computed(() =>
+  hasPermissions(
+    ['administrator', ...CONVERSATION_PERMISSIONS],
+    userPermissions.value
+  )
+);
+
 const isAssignedOnlyRestrictedAgent = computed(
   () =>
-    restrictAgentsToAssignedConversations && currentUserRole.value === 'agent'
+    restrictAgentsToAssignedConversations &&
+    currentUserRole.value === 'agent' &&
+    !currentCustomRoleId.value
 );
 
 const isAdmin = computed(() => currentUserRole.value === 'administrator');
@@ -233,9 +253,8 @@ const reportRoutes = computed(() => newReportRoutes());
 
 const menuItems = computed(() => {
   return [
-    ...(currentUserRole.value === 'agent'
-      ? []
-      : [
+    ...(canAccessInboxView.value
+      ? [
           {
             name: 'Inbox',
             label: t('SIDEBAR.INBOX'),
@@ -246,7 +265,8 @@ const menuItems = computed(() => {
               count: 'notifications/getUnreadCount',
             },
           },
-        ]),
+        ]
+      : []),
     {
       name: 'Conversation',
       label: t('SIDEBAR.CONVERSATIONS'),
