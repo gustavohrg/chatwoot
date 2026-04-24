@@ -12,12 +12,6 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useWindowSize, useEventListener } from '@vueuse/core';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
-import { useConfig } from 'dashboard/composables/useConfig';
-import {
-  hasPermissions,
-  getUserPermissions,
-} from 'dashboard/helper/permissionsHelper';
-import { CONVERSATION_PERMISSIONS } from 'dashboard/constants/permissions.js';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import SidebarGroup from './SidebarGroup.vue';
@@ -58,33 +52,17 @@ const { width: windowWidth } = useWindowSize();
 const isMobile = computed(() => windowWidth.value < 768);
 
 const accountId = useMapGetter('getCurrentAccountId');
-const currentUser = useMapGetter('getCurrentUser');
-const currentCustomRoleId = useMapGetter('getCurrentCustomRoleId');
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
 );
 const currentUserRole = useMapGetter('getCurrentRole');
-const { restrictAgentsToAssignedConversations } = useConfig();
-
-const userPermissions = computed(() =>
-  getUserPermissions(currentUser.value, accountId.value)
-);
-
-const canAccessInboxView = computed(() =>
-  hasPermissions(
-    ['administrator', ...CONVERSATION_PERMISSIONS],
-    userPermissions.value
-  )
-);
-
-const isAssignedOnlyRestrictedAgent = computed(
-  () =>
-    restrictAgentsToAssignedConversations &&
-    currentUserRole.value === 'agent' &&
-    !currentCustomRoleId.value
-);
 
 const isAdmin = computed(() => currentUserRole.value === 'administrator');
+const canAccessInboxView = computed(() => isAdmin.value);
+
+const isAssignedOnlyRestrictedAgent = computed(
+  () => currentUserRole.value === 'agent'
+);
 
 const hasAdvancedAssignment = computed(() => {
   return isFeatureEnabledonAccount.value(
@@ -296,63 +274,71 @@ const menuItems = computed(() => {
               },
             ]
           : []),
-        {
-          name: 'Folders',
-          label: t('SIDEBAR.CUSTOM_VIEWS_FOLDER'),
-          icon: 'i-lucide-folder',
-          activeOn: ['conversations_through_folders'],
-          children: conversationCustomViews.value.map(view => ({
-            name: `${view.name}-${view.id}`,
-            label: view.name,
-            to: accountScopedRoute('folder_conversations', { id: view.id }),
-          })),
-        },
-        {
-          name: 'Teams',
-          label: t('SIDEBAR.TEAMS'),
-          icon: 'i-lucide-users',
-          activeOn: ['conversations_through_team'],
-          children: teams.value.map(team => ({
-            name: `${team.name}-${team.id}`,
-            label: team.name,
-            to: accountScopedRoute('team_conversations', { teamId: team.id }),
-          })),
-        },
-        {
-          name: 'Channels',
-          label: t('SIDEBAR.CHANNELS'),
-          icon: 'i-lucide-mailbox',
-          activeOn: ['conversation_through_inbox'],
-          children: sortedInboxes.value.map(inbox => ({
-            name: `${inbox.name}-${inbox.id}`,
-            label: inbox.name,
-            icon: h(ChannelIcon, { inbox, class: 'size-[16px]' }),
-            to: accountScopedRoute('inbox_dashboard', { inbox_id: inbox.id }),
-            component: leafProps =>
-              h(ChannelLeaf, {
-                label: leafProps.label,
-                active: leafProps.active,
-                inbox,
-              }),
-          })),
-        },
-        {
-          name: 'Labels',
-          label: t('SIDEBAR.LABELS'),
-          icon: 'i-lucide-tag',
-          activeOn: ['conversations_through_label'],
-          children: labels.value.map(label => ({
-            name: `${label.title}-${label.id}`,
-            label: label.title,
-            icon: h('span', {
-              class: `size-[8px] rounded-sm`,
-              style: { backgroundColor: label.color },
-            }),
-            to: accountScopedRoute('label_conversations', {
-              label: label.title,
-            }),
-          })),
-        },
+        ...(isAdmin.value
+          ? [
+              {
+                name: 'Folders',
+                label: t('SIDEBAR.CUSTOM_VIEWS_FOLDER'),
+                icon: 'i-lucide-folder',
+                activeOn: ['conversations_through_folders'],
+                children: conversationCustomViews.value.map(view => ({
+                  name: `${view.name}-${view.id}`,
+                  label: view.name,
+                  to: accountScopedRoute('folder_conversations', { id: view.id }),
+                })),
+              },
+              {
+                name: 'Teams',
+                label: t('SIDEBAR.TEAMS'),
+                icon: 'i-lucide-users',
+                activeOn: ['conversations_through_team'],
+                children: teams.value.map(team => ({
+                  name: `${team.name}-${team.id}`,
+                  label: team.name,
+                  to: accountScopedRoute('team_conversations', {
+                    teamId: team.id,
+                  }),
+                })),
+              },
+              {
+                name: 'Channels',
+                label: t('SIDEBAR.CHANNELS'),
+                icon: 'i-lucide-mailbox',
+                activeOn: ['conversation_through_inbox'],
+                children: sortedInboxes.value.map(inbox => ({
+                  name: `${inbox.name}-${inbox.id}`,
+                  label: inbox.name,
+                  icon: h(ChannelIcon, { inbox, class: 'size-[16px]' }),
+                  to: accountScopedRoute('inbox_dashboard', {
+                    inbox_id: inbox.id,
+                  }),
+                  component: leafProps =>
+                    h(ChannelLeaf, {
+                      label: leafProps.label,
+                      active: leafProps.active,
+                      inbox,
+                    }),
+                })),
+              },
+              {
+                name: 'Labels',
+                label: t('SIDEBAR.LABELS'),
+                icon: 'i-lucide-tag',
+                activeOn: ['conversations_through_label'],
+                children: labels.value.map(label => ({
+                  name: `${label.title}-${label.id}`,
+                  label: label.title,
+                  icon: h('span', {
+                    class: `size-[8px] rounded-sm`,
+                    style: { backgroundColor: label.color },
+                  }),
+                  to: accountScopedRoute('label_conversations', {
+                    label: label.title,
+                  }),
+                })),
+              },
+            ]
+          : []),
       ],
     },
     ...(isAdmin.value

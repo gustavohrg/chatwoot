@@ -4,7 +4,6 @@ import DashboardAudioNotificationHelper from './AudioAlerts/DashboardAudioNotifi
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { emitter } from 'shared/helpers/mitt';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
-import { parseBoolean } from '@chatwoot/utils';
 
 const { isImpersonating } = useImpersonation();
 
@@ -141,19 +140,7 @@ class ActionCableConnector extends BaseActionCableConnector {
   };
 
   shouldIgnoreConversationPayload = conversation => {
-    const isRestricted = parseBoolean(
-      window.chatwootConfig?.restrictAgentsToAssignedConversations
-    );
-
-    if (!isRestricted) {
-      return false;
-    }
-
     if (this.app.$store.getters.getCurrentRole !== 'agent') {
-      return false;
-    }
-
-    if (this.app.$store.getters.getCurrentCustomRoleId) {
       return false;
     }
 

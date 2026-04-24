@@ -29,15 +29,11 @@ class Conversations::PermissionFilterService
   end
 
   def restrict_agents_to_assigned_conversations?
-    ChatwootApp.restrict_agents_to_assigned_conversations? && user_role == 'agent' && !custom_role_user?
+    user_role == 'agent'
   end
 
   def user_role
     account_user&.role
-  end
-
-  def custom_role_user?
-    account_user&.respond_to?(:custom_role_id) && account_user.custom_role_id.present?
   end
 end
 

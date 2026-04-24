@@ -44,7 +44,6 @@ import {
 } from 'dashboard/composables/useTransformKeys';
 import { useEmitter } from 'dashboard/composables/emitter';
 import { useConversationRequiredAttributes } from 'dashboard/composables/useConversationRequiredAttributes';
-import { useConfig } from 'dashboard/composables/useConfig';
 
 import { emitter } from 'shared/helpers/mitt';
 
@@ -126,11 +125,9 @@ const campaigns = useMapGetter('campaigns/getAllCampaigns');
 const labels = useMapGetter('labels/getLabels');
 const currentAccountId = useMapGetter('getCurrentAccountId');
 const currentUserRole = useMapGetter('getCurrentRole');
-const currentCustomRoleId = useMapGetter('getCurrentCustomRoleId');
 // We can't useFunctionGetter here since it needs to be called on setup?
 const getTeamFn = useMapGetter('teams/getTeam');
 const getConversationById = useMapGetter('getConversationById');
-const { restrictAgentsToAssignedConversations } = useConfig();
 
 useChatListKeyboardEvents(conversationListRef);
 const {
@@ -197,10 +194,7 @@ const userPermissions = computed(() => {
 });
 
 const isAssignedOnlyRestrictedAgent = computed(
-  () =>
-    restrictAgentsToAssignedConversations &&
-    currentUserRole.value === 'agent' &&
-    !currentCustomRoleId.value
+  () => currentUserRole.value === 'agent'
 );
 
 const assigneeTabItems = computed(() => {

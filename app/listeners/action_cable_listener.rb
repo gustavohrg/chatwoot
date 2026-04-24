@@ -198,8 +198,6 @@ class ActionCableListener < BaseListener
   end
 
   def filter_restricted_agents_for_conversation(account, conversation, agents)
-    return agents unless ChatwootApp.restrict_agents_to_assigned_conversations?
-
     restricted_agent_ids = restricted_assigned_only_agent_ids(account)
     return agents if restricted_agent_ids.empty?
 
@@ -210,22 +208,16 @@ class ActionCableListener < BaseListener
   end
 
   def restricted_assigned_only_agent_ids(account)
-    scope = account.account_users.where(role: 'agent')
-    scope = scope.where(custom_role_id: nil) if AccountUser.column_names.include?('custom_role_id')
-
-    scope.pluck(:user_id)
+    account.account_users.where(role: 'agent').pluck(:user_id)
   end
 
   def previous_restricted_assignee_token(event, account)
-    return nil unless ChatwootApp.restrict_agents_to_assigned_conversations?
-
     assignee_change = assignee_id_change(event)
     previous_assignee_id = assignee_change&.first
     return nil if previous_assignee_id.blank?
 
     previous_account_user = account.account_users.find_by(user_id: previous_assignee_id)
     return nil if previous_account_user.blank? || previous_account_user.role != 'agent'
-    return nil if previous_account_user.respond_to?(:custom_role_id) && previous_account_user.custom_role_id.present?
 
     User.find_by(id: previous_assignee_id)&.pubsub_token
   end

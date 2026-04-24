@@ -68,8 +68,6 @@ class BulkActionsJob < ApplicationJob
   end
 
   def restrict_agents_to_assigned_conversations?
-    return false unless ChatwootApp.restrict_agents_to_assigned_conversations?
-
     @account.account_users.find_by(user: Current.user)&.agent?
   end
 end

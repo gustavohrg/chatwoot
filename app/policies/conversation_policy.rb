@@ -46,11 +46,7 @@ class ConversationPolicy < ApplicationPolicy
   end
 
   def restrict_agents_to_assigned_conversations?
-    ChatwootApp.restrict_agents_to_assigned_conversations? && account_user&.agent? && !custom_role_user?
-  end
-
-  def custom_role_user?
-    account_user&.respond_to?(:custom_role_id) && account_user.custom_role_id.present?
+    account_user&.agent?
   end
 end
 

@@ -180,7 +180,7 @@ class SearchService
   end
 
   def restrict_agents_to_assigned_conversations?
-    ChatwootApp.restrict_agents_to_assigned_conversations? && account_user&.agent?
+    account_user&.agent?
   end
 
   def filter_contacts

@@ -16,7 +16,6 @@ import {
   handleVoiceCallCreated,
   handleVoiceCallUpdated,
 } from 'dashboard/helper/voice';
-import { parseBoolean } from '@chatwoot/utils';
 
 export const hasMessageFailedWithExternalError = pendingMessage => {
   // This helper is used to check if the message has failed with an external error.
@@ -31,15 +30,7 @@ export const hasMessageFailedWithExternalError = pendingMessage => {
 };
 
 const isRestrictedAssignedOnlyAgent = rootGetters => {
-  const isRestricted = parseBoolean(
-    window.chatwootConfig?.restrictAgentsToAssignedConversations
-  );
-
-  return (
-    isRestricted &&
-    rootGetters?.getCurrentRole === 'agent' &&
-    !rootGetters?.getCurrentCustomRoleId
-  );
+  return rootGetters?.getCurrentRole === 'agent';
 };
 
 const isAssignedToCurrentUser = (conversation, rootGetters) => {
