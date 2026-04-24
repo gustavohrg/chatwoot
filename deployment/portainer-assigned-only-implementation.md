@@ -195,7 +195,7 @@ Freeze production first and build from that exact upstream version, not from `la
 Then publish a pinned production image, for example:
 
 ```text
-ghcr.io/gustavohrg/chatwoot:<prod-tag>-assigned-only-v1
+ghcr.io/gustavohrg/chatwoot:v4.12.1-assigned-only-v1
 ```
 
 Recommended path:
@@ -204,7 +204,7 @@ Recommended path:
 2. Open GitHub Actions.
 3. Run `Publish Assigned-Only Image to GHCR`.
 4. Choose the exact branch or tag that matches the production freeze.
-5. Set `image_tag` to something version-pinned such as `<prod-tag>-assigned-only-v1`.
+5. Set `image_tag` to something version-pinned such as `v4.12.1-assigned-only-v1`.
 6. Keep `platforms` as `linux/amd64` unless you explicitly need multi-arch images.
 
 Make sure Portainer can pull the GHCR image:
@@ -227,7 +227,7 @@ Relevant production snippet:
 
 ```yaml
 x-base: &base
-  image: ghcr.io/gustavohrg/chatwoot:<prod-tag>-assigned-only-v1
+  image: ghcr.io/gustavohrg/chatwoot:v4.12.1-assigned-only-v1
   environment:
     - FORCE_SSL=true
     - CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true
@@ -238,7 +238,7 @@ For your current Portainer stack, the exact stack-level diff is:
 ```diff
  x-base: &base
 -  image: chatwoot/chatwoot:latest
-+  image: ghcr.io/gustavohrg/chatwoot:<prod-tag>-assigned-only-v1
++  image: ghcr.io/gustavohrg/chatwoot:v4.12.1-assigned-only-v1
    environment:
 @@
 -    - ENABLE_FORCE_SSL=true
@@ -260,7 +260,7 @@ Use the provided template at `deployment/portainer/chatwoot-assigned-only.produc
 Add these values to the Portainer environment editor:
 
 ```text
-CHATWOOT_IMAGE=ghcr.io/gustavohrg/chatwoot:<prod-tag>-assigned-only-v1
+CHATWOOT_IMAGE=ghcr.io/gustavohrg/chatwoot:v4.12.1-assigned-only-v1
 CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true
 ```
 
@@ -283,3 +283,44 @@ Rollback is image-based, not container-edit based:
 3. Redeploy the stack.
 
 Do not patch running containers in place.
+
+## 8. Quick Redeploy Guide (New Feature)
+
+When you've added a new feature on this worktree and need to redeploy to Portainer:
+
+### Step 1: Publish the New Image
+
+1. Push your branch to GitHub.
+2. Go to **GitHub Actions** → `Publish Assigned-Only Image to GHCR`.
+3. Run the workflow with:
+   - **Branch/tag**: your feature branch
+   - **image_tag**: a new version-pinned tag (e.g., `v4.12.1-assigned-only-v2`)
+   - **platforms**: `linux/amd64`
+
+### Step 2: Update Portainer Stack
+
+In Portainer's stack editor, update the image tag:
+
+```diff
+ x-base: &base
+-  image: ghcr.io/gustavohrg/chatwoot:<old-tag>
++  image: ghcr.io/gustavohrg/chatwoot:<new-tag>
+```
+
+### Step 3: Update Portainer Environment Variables
+
+Update the environment editor with the new image tag:
+
+```text
+CHATWOOT_IMAGE=ghcr.io/gustavohrg/chatwoot:<new-tag>
+```
+
+### Step 4: Redeploy
+
+Click **Update the stack** in Portainer to redeploy with the new image.
+
+### Notes
+
+- If the new feature adds database migrations, run `db:chatwoot_prepare` through `docker exec` after redeploying.
+- Test locally with the Swarm stack first before deploying to production.
+- Keep the previous image tag documented for quick rollback if needed.
