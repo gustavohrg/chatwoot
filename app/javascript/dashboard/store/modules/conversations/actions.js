@@ -16,6 +16,7 @@ import {
   handleVoiceCallCreated,
   handleVoiceCallUpdated,
 } from 'dashboard/helper/voice';
+import { parseBoolean } from '@chatwoot/utils';
 
 export const hasMessageFailedWithExternalError = pendingMessage => {
   // This helper is used to check if the message has failed with an external error.
@@ -27,6 +28,27 @@ export const hasMessageFailedWithExternalError = pendingMessage => {
   const { content_attributes: contentAttributes, status } = pendingMessage;
   const externalError = contentAttributes?.external_error ?? '';
   return status === MESSAGE_STATUS.FAILED && externalError !== '';
+};
+
+const isRestrictedAssignedOnlyAgent = rootGetters => {
+  const isRestricted = parseBoolean(
+    window.chatwootConfig?.restrictAgentsToAssignedConversations
+  );
+
+  return isRestricted && rootGetters?.getCurrentRole === 'agent';
+};
+
+const isAssignedToCurrentUser = (conversation, rootGetters) => {
+  if (!isRestrictedAssignedOnlyAgent(rootGetters)) {
+    return true;
+  }
+
+  const currentUserId = Number(rootGetters?.getCurrentUserID);
+  const assigneeId = Number(
+    conversation?.assignee_id || conversation?.meta?.assignee?.id
+  );
+
+  return assigneeId === currentUserId;
 };
 
 // actions
@@ -319,6 +341,10 @@ const actions = {
   },
 
   addMessage({ commit, rootGetters }, message) {
+    if (!isAssignedToCurrentUser(message?.conversation, rootGetters)) {
+      return;
+    }
+
     commit(types.ADD_MESSAGE, message);
     if (message.message_type === MESSAGE_TYPE.INCOMING) {
       commit(types.SET_CONVERSATION_CAN_REPLY, {
@@ -331,6 +357,10 @@ const actions = {
   },
 
   updateMessage({ commit, rootGetters }, message) {
+    if (!isAssignedToCurrentUser(message?.conversation, rootGetters)) {
+      return;
+    }
+
     commit(types.ADD_MESSAGE, message);
     handleVoiceCallUpdated(commit, message, rootGetters?.getCurrentUserID);
   },
@@ -358,7 +388,14 @@ const actions = {
     }
   },
 
-  addConversation({ commit, state, dispatch, rootState }, conversation) {
+  addConversation(
+    { commit, state, dispatch, rootState, rootGetters },
+    conversation
+  ) {
+    if (!isAssignedToCurrentUser(conversation, rootGetters)) {
+      return;
+    }
+
     const { currentInbox, appliedFilters } = state;
     const {
       inbox_id: inboxId,
@@ -391,7 +428,12 @@ const actions = {
     }
   },
 
-  updateConversation({ commit, dispatch }, conversation) {
+  updateConversation({ commit, dispatch, rootGetters }, conversation) {
+    if (!isAssignedToCurrentUser(conversation, rootGetters)) {
+      commit(types.DELETE_CONVERSATION, conversation.id);
+      return;
+    }
+
     const {
       meta: { sender },
     } = conversation;

@@ -4,6 +4,7 @@ import DashboardAudioNotificationHelper from './AudioAlerts/DashboardAudioNotifi
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { emitter } from 'shared/helpers/mitt';
 import { useImpersonation } from 'dashboard/composables/useImpersonation';
+import { parseBoolean } from '@chatwoot/utils';
 
 const { isImpersonating } = useImpersonation();
 
@@ -82,11 +83,19 @@ class ActionCableConnector extends BaseActionCableConnector {
   };
 
   onConversationCreated = data => {
+    if (this.shouldIgnoreConversationPayload(data)) {
+      return;
+    }
+
     this.app.$store.dispatch('addConversation', data);
     this.fetchConversationStats();
   };
 
   onConversationRead = data => {
+    if (this.shouldIgnoreConversationPayload(data)) {
+      return;
+    }
+
     this.app.$store.dispatch('updateConversation', data);
   };
 
@@ -94,6 +103,10 @@ class ActionCableConnector extends BaseActionCableConnector {
   onLogout = () => AuthAPI.logout();
 
   onMessageCreated = data => {
+    if (this.shouldIgnoreConversationPayload(data?.conversation)) {
+      return;
+    }
+
     const {
       conversation: { last_activity_at: lastActivityAt },
       conversation_id: conversationId,
@@ -110,13 +123,42 @@ class ActionCableConnector extends BaseActionCableConnector {
   onReload = () => window.location.reload();
 
   onStatusChange = data => {
+    if (this.shouldIgnoreConversationPayload(data)) {
+      return;
+    }
+
     this.app.$store.dispatch('updateConversation', data);
     this.fetchConversationStats();
   };
 
   onConversationUpdated = data => {
+    if (this.shouldIgnoreConversationPayload(data)) {
+      return;
+    }
+
     this.app.$store.dispatch('updateConversation', data);
     this.fetchConversationStats();
+  };
+
+  shouldIgnoreConversationPayload = conversation => {
+    const isRestricted = parseBoolean(
+      window.chatwootConfig?.restrictAgentsToAssignedConversations
+    );
+
+    if (!isRestricted) {
+      return false;
+    }
+
+    if (this.app.$store.getters.getCurrentRole !== 'agent') {
+      return false;
+    }
+
+    const currentUserId = Number(this.app.$store.getters.getCurrentUserID);
+    const assigneeId = Number(
+      conversation?.assignee_id || conversation?.meta?.assignee?.id
+    );
+
+    return assigneeId !== currentUserId;
   };
 
   onTypingOn = ({ conversation, user }) => {
