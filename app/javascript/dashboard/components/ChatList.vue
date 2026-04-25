@@ -196,6 +196,9 @@ const userPermissions = computed(() => {
 const isAssignedOnlyRestrictedAgent = computed(
   () => currentUserRole.value !== 'administrator'
 );
+const canManageConversationCustomViews = computed(
+  () => !isAssignedOnlyRestrictedAgent.value
+);
 
 const assigneeTabItems = computed(() => {
   return filterItemsByPermission(
@@ -617,6 +620,11 @@ function onBasicFilterChange(value, type) {
 }
 
 function openLastSavedItemInFolder() {
+  if (!canManageConversationCustomViews.value) {
+    router.push({ name: 'home' });
+    return;
+  }
+
   const lastItemOfFolder = folders.value[folders.value.length - 1];
   const lastItemId = lastItemOfFolder.id;
   router.push({
@@ -895,6 +903,7 @@ watch(conversationFilters, (newVal, oldVal) => {
       :is-on-expanded-layout="isOnExpandedLayout"
       :conversation-stats="conversationStats"
       :is-list-loading="chatListLoading && !conversationList.length"
+      :can-manage-conversation-custom-views="canManageConversationCustomViews"
       @add-folders="onClickOpenAddFoldersModal"
       @delete-folders="onClickOpenDeleteFoldersModal"
       @filters-modal="onToggleAdvanceFiltersModal"

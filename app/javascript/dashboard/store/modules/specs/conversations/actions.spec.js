@@ -56,6 +56,10 @@ describe('#hasMessageFailedWithExternalError', () => {
 });
 
 describe('#actions', () => {
+  const adminRootGetters = {
+    getCurrentRole: 'administrator',
+  };
+
   describe('#getConversation', () => {
     it('sends correct actions if API is success', async () => {
       axios.get.mockResolvedValue({
@@ -98,7 +102,12 @@ describe('#actions', () => {
         labels: ['support'],
       };
       actions.updateConversation(
-        { commit, rootState: { route: { name: 'home' } }, dispatch },
+        {
+          commit,
+          rootState: { route: { name: 'home' } },
+          rootGetters: adminRootGetters,
+          dispatch,
+        },
         conversation
       );
       expect(commit.mock.calls).toEqual([
@@ -132,6 +141,7 @@ describe('#actions', () => {
         {
           commit,
           rootState: { route: { name: 'home' } },
+          rootGetters: adminRootGetters,
           dispatch,
           state: { currentInbox: 1, appliedFilters: [] },
         },
@@ -152,6 +162,7 @@ describe('#actions', () => {
         {
           commit,
           rootState: { route: { name: 'home' } },
+          rootGetters: adminRootGetters,
           dispatch,
           state: { currentInbox: 1, appliedFilters: [{ id: 'random-filter' }] },
         },
@@ -172,6 +183,7 @@ describe('#actions', () => {
         {
           commit,
           rootState: { route: { name: 'conversation_mentions' } },
+          rootGetters: adminRootGetters,
           dispatch,
           state: { currentInbox: 1, appliedFilters: [{ id: 'random-filter' }] },
         },
@@ -192,6 +204,7 @@ describe('#actions', () => {
         {
           commit,
           rootState: { route: { name: 'folder_conversations' } },
+          rootGetters: adminRootGetters,
           dispatch,
           state: { currentInbox: 1, appliedFilters: [{ id: 'random-filter' }] },
         },
@@ -212,6 +225,7 @@ describe('#actions', () => {
         {
           commit,
           rootState: { route: { name: 'home' } },
+          rootGetters: adminRootGetters,
           dispatch,
           state: { currentInbox: 1, appliedFilters: [] },
         },
@@ -242,6 +256,7 @@ describe('#actions', () => {
         {
           commit,
           rootState: { route: { name: 'home' } },
+          rootGetters: adminRootGetters,
           dispatch,
           state: { appliedFilters: [] },
         },
@@ -269,7 +284,7 @@ describe('#actions', () => {
         message_type: 0,
         conversation_id: 1,
       };
-      actions.addMessage({ commit }, message);
+      actions.addMessage({ commit, rootGetters: adminRootGetters }, message);
       expect(commit.mock.calls).toEqual([
         [types.ADD_MESSAGE, message],
         [
@@ -285,7 +300,7 @@ describe('#actions', () => {
         message_type: 1,
         conversation_id: 1,
       };
-      actions.addMessage({ commit }, message);
+      actions.addMessage({ commit, rootGetters: adminRootGetters }, message);
       expect(commit.mock.calls).toEqual([[types.ADD_MESSAGE, message]]);
     });
   });
@@ -492,6 +507,31 @@ describe('#actions', () => {
       expect(commit.mock.calls).toEqual([
         ['CHANGE_CHAT_SORT_FILTER', { data: 'sort_on_created_at' }],
       ]);
+    });
+  });
+
+  describe('#updateConversation for restricted agents', () => {
+    it('removes conversations that are no longer assigned to the current user', () => {
+      const conversation = {
+        id: 1,
+        assignee_id: 2,
+        meta: { sender: { id: 1, name: 'john-doe' } },
+      };
+
+      actions.updateConversation(
+        {
+          commit,
+          dispatch,
+          rootGetters: {
+            getCurrentRole: 'agent',
+            getCurrentUserID: 1,
+          },
+        },
+        conversation
+      );
+
+      expect(commit.mock.calls).toEqual([[types.DELETE_CONVERSATION, 1]]);
+      expect(dispatch.mock.calls).toEqual([]);
     });
   });
 });

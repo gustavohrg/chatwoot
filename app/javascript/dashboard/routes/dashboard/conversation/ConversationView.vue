@@ -127,6 +127,12 @@ export default {
     onConversationLoad() {
       this.fetchConversationIfUnavailable();
     },
+    redirectToConversationList() {
+      this.$router.push({
+        name: 'home',
+        params: { accountId: this.accountId },
+      });
+    },
     initialize() {
       this.$store.dispatch('setActiveInbox', this.inboxId);
       this.setActiveChat();
@@ -152,7 +158,14 @@ export default {
       }
       const chat = this.findConversation();
       if (!chat) {
-        this.$store.dispatch('getConversation', this.conversationId);
+        this.$store
+          .dispatch('getConversation', this.conversationId)
+          .then(() => {
+            if (!this.findConversation()) {
+              this.$store.dispatch('clearSelectedState');
+              this.redirectToConversationList();
+            }
+          });
       }
     },
     findConversation() {
@@ -163,12 +176,16 @@ export default {
     setActiveChat() {
       if (this.conversationId) {
         const selectedConversation = this.findConversation();
-        // If conversation doesn't exist or selected conversation is same as the active
-        // conversation, don't set active conversation.
-        if (
-          !selectedConversation ||
-          selectedConversation.id === this.currentChat.id
-        ) {
+        if (!selectedConversation) {
+          if (this.currentChat.id === parseInt(this.conversationId, 10)) {
+            this.$store.dispatch('clearSelectedState');
+            this.redirectToConversationList();
+          }
+          return;
+        }
+
+        // If the selected conversation is already active, don't set it again.
+        if (selectedConversation.id === this.currentChat.id) {
           return;
         }
         const { messageId } = this.$route.query;

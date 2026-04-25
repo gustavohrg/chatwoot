@@ -16,6 +16,7 @@ const props = defineProps({
   isOnExpandedLayout: { type: Boolean, required: true },
   conversationStats: { type: Object, required: true },
   isListLoading: { type: Boolean, required: true },
+  canManageConversationCustomViews: { type: Boolean, required: true },
 });
 
 const emit = defineEmits([
@@ -87,7 +88,7 @@ const toggleConversationLayout = () => {
     </div>
     <div class="flex items-center gap-1">
       <template v-if="hasAppliedFilters && !hasActiveFolders">
-        <div class="relative">
+        <div v-if="canManageConversationCustomViews" class="relative">
           <NextButton
             v-tooltip.top-end="$t('FILTER.CUSTOM_VIEWS.ADD.SAVE_BUTTON')"
             icon="i-lucide-save"
