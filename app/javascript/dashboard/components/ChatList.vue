@@ -194,7 +194,7 @@ const userPermissions = computed(() => {
 });
 
 const isAssignedOnlyRestrictedAgent = computed(
-  () => currentUserRole.value === 'agent'
+  () => currentUserRole.value !== 'administrator'
 );
 
 const assigneeTabItems = computed(() => {

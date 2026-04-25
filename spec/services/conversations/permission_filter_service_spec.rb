@@ -43,21 +43,19 @@ RSpec.describe Conversations::PermissionFilterService do
         expect(result.count).to eq(2)
       end
 
-      it 'returns only the agent assigned conversations when assigned-only restriction is enabled' do
+      it 'returns only the agent assigned conversations' do
         other_agent = create(:user, account: account, role: :agent)
 
         conversation.update!(assignee: agent)
         another_conversation.update!(assignee: other_agent)
 
-        with_modified_env CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS: 'true' do
-          result = described_class.new(
-            account.conversations,
-            agent,
-            account
-          ).perform
+        result = described_class.new(
+          account.conversations,
+          agent,
+          account
+        ).perform
 
-          expect(result).to contain_exactly(conversation)
-        end
+        expect(result).to contain_exactly(conversation)
       end
     end
   end

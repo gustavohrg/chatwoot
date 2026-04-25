@@ -140,7 +140,7 @@ class ActionCableConnector extends BaseActionCableConnector {
   };
 
   shouldIgnoreConversationPayload = conversation => {
-    if (this.app.$store.getters.getCurrentRole !== 'agent') {
+    if (this.app.$store.getters.getCurrentRole === 'administrator') {
       return false;
     }
 

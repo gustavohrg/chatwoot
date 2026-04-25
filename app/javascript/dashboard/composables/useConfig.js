@@ -38,20 +38,11 @@ export function useConfig() {
    */
   const enterprisePlanName = config.enterprisePlanName;
 
-  /**
-   * Restricts non-admin agents to self-assigned conversations only.
-   * @type {boolean}
-   */
-  const restrictAgentsToAssignedConversations = parseBoolean(
-    config.restrictAgentsToAssignedConversations
-  );
-
   return {
     hostURL,
     vapidPublicKey,
     enabledLanguages,
     isEnterprise,
     enterprisePlanName,
-    restrictAgentsToAssignedConversations,
   };
 }

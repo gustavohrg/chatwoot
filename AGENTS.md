@@ -55,6 +55,23 @@
 - Prefer `with_modified_env` (from spec helpers) over stubbing `ENV` directly in specs
 - Specs in parallel/reloading environments: prefer comparing `error.class.name` over constant class equality when asserting raised errors
 
+## Fork-Specific Instructions
+
+- This repository is a Chatwoot fork with an assigned-only product rule for conversation visibility.
+- Treat `deployment/portainer-assigned-only-implementation.md` as the canonical guide when the task touches:
+  - conversation visibility or permissions
+  - assigned-only behavior
+  - Docker/Swarm/Portainer deployment for this fork
+  - release or rollout steps for the custom image
+- For this fork, the intended behavior is:
+  - administrators can see all conversations
+  - every non-admin role can only see conversations assigned to that user
+  - unassigned conversations are not visible to non-admin users
+- Do not review or “fix” this assigned-only behavior back toward upstream Chatwoot defaults unless the user explicitly asks for that.
+- When reviewing changes against `develop`, evaluate correctness against this fork’s assigned-only intent, not stock upstream behavior.
+- If AGENTS.md and `deployment/portainer-assigned-only-implementation.md` conflict on assigned-only workflow or acceptance criteria, follow the Portainer guide for those tasks.
+- For assigned-only acceptance testing, prefer the Docker-based local Swarm workflow from the Portainer guide over host-run `pnpm dev`, `overmind`, or direct non-container app runs.
+
 ## Codex Worktree Workflow
 
 - Use a separate git worktree + branch per task to keep changes isolated.

@@ -37,14 +37,13 @@ git worktree add ../chatwoot-assigned-only -b feat/assigned-only-agent-restricti
 
 Keep the fork diff narrow:
 
-- `CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS` runtime toggle
 - assigned-only backend enforcement
 - minimal dashboard/runtime changes
 - local Swarm deployment assets
 
 ## 3. Code Touchpoints
 
-The feature is intentionally env-driven. When `CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true`:
+The feature is enforced for all non-admin roles:
 
 - non-admin agents can only list conversations assigned to themselves
 - direct conversation access is denied unless `assignee_id == current_user.id`
@@ -118,7 +117,7 @@ All follow-up actions in this guide assume the stack is already running and are 
 
 ## 5. QA Matrix
 
-Verify these cases locally with `CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true`:
+Verify these cases locally:
 
 - Admin can still see all conversations.
 - Agent A sees only conversations assigned to Agent A.
@@ -128,12 +127,6 @@ Verify these cases locally with `CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=tr
 - Bulk actions only mutate Agent A's assigned conversations.
 - Sidebar hides `Mentions` and `Unattended`.
 - Sidebar relabels `All Conversations` to `My Conversations`.
-
-Then verify the toggle-off baseline:
-
-- set `CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=false`
-- redeploy locally
-- confirm stock community behavior is unchanged
 
 These checks are Docker-only acceptance checks. Do not substitute them with direct host-level app runs.
 
@@ -217,7 +210,6 @@ Make sure Portainer can pull the GHCR image:
 Your current stack editor content should change in these exact ways:
 
 - replace `chatwoot/chatwoot:latest` with the pinned custom image tag
-- add `CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true`
 - replace `ENABLE_FORCE_SSL=true` with `FORCE_SSL=true`
 - set the `internal` overlay network to `attachable: true`
 - keep the existing Traefik labels and service names intact
@@ -230,7 +222,6 @@ x-base: &base
   image: ghcr.io/gustavohrg/chatwoot:v4.12.1-assigned-only-v1
   environment:
     - FORCE_SSL=true
-    - CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true
 ```
 
 For your current Portainer stack, the exact stack-level diff is:
@@ -243,7 +234,6 @@ For your current Portainer stack, the exact stack-level diff is:
 @@
 -    - ENABLE_FORCE_SSL=true
 +    - FORCE_SSL=true
-+    - CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true
 @@
  networks:
    zirenet:
@@ -261,7 +251,6 @@ Add these values to the Portainer environment editor:
 
 ```text
 CHATWOOT_IMAGE=ghcr.io/gustavohrg/chatwoot:v4.12.1-assigned-only-v1
-CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=true
 ```
 
 Keep your existing production secrets and SMTP settings unchanged unless you intend to rotate them.
@@ -279,8 +268,7 @@ If you later upgrade Chatwoot to a newer upstream version, follow the normal Cha
 Rollback is image-based, not container-edit based:
 
 1. Revert the Portainer stack image tag to the previous pinned image.
-2. Set `CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS=false` or remove it.
-3. Redeploy the stack.
+2. Redeploy the stack.
 
 Do not patch running containers in place.
 

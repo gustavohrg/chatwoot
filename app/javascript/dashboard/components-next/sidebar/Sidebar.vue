@@ -61,7 +61,7 @@ const isAdmin = computed(() => currentUserRole.value === 'administrator');
 const canAccessInboxView = computed(() => isAdmin.value);
 
 const isAssignedOnlyRestrictedAgent = computed(
-  () => currentUserRole.value === 'agent'
+  () => !isAdmin.value
 );
 
 const hasAdvancedAssignment = computed(() => {

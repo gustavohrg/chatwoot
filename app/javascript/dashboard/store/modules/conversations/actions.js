@@ -30,7 +30,7 @@ export const hasMessageFailedWithExternalError = pendingMessage => {
 };
 
 const isRestrictedAssignedOnlyAgent = rootGetters => {
-  return rootGetters?.getCurrentRole === 'agent';
+  return rootGetters?.getCurrentRole !== 'administrator';
 };
 
 const isAssignedToCurrentUser = (conversation, rootGetters) => {

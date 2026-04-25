@@ -70,7 +70,7 @@ RSpec.describe ConversationPolicy, type: :policy do
       end
     end
 
-    context 'when assigned-only restriction is enabled' do
+    context 'when agent visibility is restricted to assigned conversations' do
       let(:inbox) { create(:inbox, account: account) }
       let(:other_agent) { create(:user, account: account, role: :agent) }
 
@@ -79,25 +79,19 @@ RSpec.describe ConversationPolicy, type: :policy do
       it 'allows access to conversations assigned to the agent' do
         conversation = create(:conversation, account: account, inbox: inbox, assignee: agent)
 
-        with_modified_env CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS: 'true' do
-          expect(subject).to permit(agent_context, conversation)
-        end
+        expect(subject).to permit(agent_context, conversation)
       end
 
       it 'denies access to unassigned conversations even with inbox access' do
         conversation = create(:conversation, account: account, inbox: inbox, assignee: nil)
 
-        with_modified_env CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS: 'true' do
-          expect(subject).not_to permit(agent_context, conversation)
-        end
+        expect(subject).not_to permit(agent_context, conversation)
       end
 
       it 'denies access to conversations assigned to another agent' do
         conversation = create(:conversation, account: account, inbox: inbox, assignee: other_agent)
 
-        with_modified_env CW_RESTRICT_AGENTS_TO_ASSIGNED_CONVERSATIONS: 'true' do
-          expect(subject).not_to permit(agent_context, conversation)
-        end
+        expect(subject).not_to permit(agent_context, conversation)
       end
     end
   end
