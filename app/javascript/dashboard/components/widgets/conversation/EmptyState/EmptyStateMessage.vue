@@ -1,7 +1,5 @@
 <script>
-import FeaturePlaceholder from './FeaturePlaceholder.vue';
 export default {
-  components: { FeaturePlaceholder },
   props: {
     message: {
       type: String,
@@ -27,7 +25,5 @@ export default {
       {{ message }}
       <br />
     </span>
-    <!-- Cmd bar, keyboard shortcuts placeholder -->
-    <FeaturePlaceholder />
   </div>
 </template>
