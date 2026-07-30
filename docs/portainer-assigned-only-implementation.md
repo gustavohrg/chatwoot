@@ -85,15 +85,25 @@ The script performs all local bootstrap steps:
 6. deploys stack `chatwoot-local`;
 7. waits for Rails and runs `bundle exec rails db:chatwoot_prepare`.
 
-Open `http://localhost:3300` and create the first administrator account.
+The database preparation step creates tables only. It does not create a
+Chatwoot account or administrator.
+
+**Required order before seeding:**
+
+1. Open `http://localhost:3300/installation/onboarding`.
+2. Complete onboarding and create the first administrator.
+3. Only after that, run the seed command below.
+
+Running the seed before onboarding fails because `Account.last` is `nil`, with
+`undefined method 'administrators' for nil`.
 
 The script can be run again after code changes. It rebuilds the image, deploys
 the stack, and repeats the idempotent database preparation step.
 
 ### Seed demo data
 
-After creating the first administrator, run the seed command printed by the
-script:
+After completing onboarding and creating the first administrator, run the seed
+command printed by the script:
 
 ```bash
 RAILS_CONTAINER=$(docker ps \

@@ -125,7 +125,12 @@ Local Swarm stack deployed.
 
 Open: http://localhost:$(grep '^RAILS_PORT=' "${ENV_FILE}" | cut -d'=' -f2)
 
-Create the first admin account in the browser, then seed the minimal assigned-only demo data with:
+IMPORTANT: database preparation creates tables, not an account.
+Do not run seed command before onboarding.
+
+1. Open http://localhost:$(grep '^RAILS_PORT=' "${ENV_FILE}" | cut -d'=' -f2)/installation/onboarding
+2. Create the first administrator in the browser.
+3. Then run seed command:
 
 RAILS_CONTAINER=\$(docker ps \\
   --filter 'label=com.docker.swarm.service.name=${STACK_NAME}_rails' \\
