@@ -127,8 +127,13 @@ Open: http://localhost:$(grep '^RAILS_PORT=' "${ENV_FILE}" | cut -d'=' -f2)
 
 Create the first admin account in the browser, then seed the minimal assigned-only demo data with:
 
-docker exec -it \$(docker ps --filter label=com.docker.swarm.service.name=${STACK_NAME}_rails -q | head -n1) \\
-  bundle exec rails runner "Seeders::AssignedOnlyDemoSeeder.new(account: Account.last).perform!"
+RAILS_CONTAINER=\$(docker ps \\
+  --filter 'label=com.docker.swarm.service.name=${STACK_NAME}_rails' \\
+  --format '{{.ID}}' | head -n1)
+
+docker exec -it "\$RAILS_CONTAINER" \\
+  bundle exec rails runner \\
+  'Seeders::AssignedOnlyDemoSeeder.new(account: Account.last).perform!'
 
 Recommended verification:
 1. Log in as Agent A with agent.a@assigned-only.demo.test / Password1!.

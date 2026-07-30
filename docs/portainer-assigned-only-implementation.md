@@ -96,11 +96,13 @@ After creating the first administrator, run the seed command printed by the
 script:
 
 ```bash
-docker exec -it "$(docker ps \
-  --filter label=com.docker.swarm.service.name=chatwoot-local_rails \
-  --format '{{.ID}}' | head -n1)" \
+RAILS_CONTAINER=$(docker ps \
+  --filter 'label=com.docker.swarm.service.name=chatwoot-local_rails' \
+  --format '{{.ID}}' | head -n1)
+
+docker exec -it "$RAILS_CONTAINER" \
   bundle exec rails runner \
-  "Seeders::AssignedOnlyDemoSeeder.new(account: Account.last).perform!"
+  'Seeders::AssignedOnlyDemoSeeder.new(account: Account.last).perform!'
 ```
 
 This seeder is for the local demo account only. It deletes that account's
