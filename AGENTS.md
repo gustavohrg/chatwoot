@@ -58,7 +58,7 @@
 ## Fork-Specific Instructions
 
 - This repository is a Chatwoot fork with an assigned-only product rule for conversation visibility.
-- Treat `deployment/portainer-assigned-only-implementation.md` as the canonical guide when the task touches:
+- Treat `docs/portainer-assigned-only-implementation.md` as the canonical guide when the task touches:
   - conversation visibility or permissions
   - assigned-only behavior
   - Docker/Swarm/Portainer deployment for this fork
@@ -69,7 +69,7 @@
   - unassigned conversations are not visible to non-admin users
 - Do not review or “fix” this assigned-only behavior back toward upstream Chatwoot defaults unless the user explicitly asks for that.
 - When reviewing changes against `develop`, evaluate correctness against this fork’s assigned-only intent, not stock upstream behavior.
-- If AGENTS.md and `deployment/portainer-assigned-only-implementation.md` conflict on assigned-only workflow or acceptance criteria, follow the Portainer guide for those tasks.
+- If AGENTS.md and `docs/portainer-assigned-only-implementation.md` conflict on assigned-only workflow or acceptance criteria, follow the Portainer guide for those tasks.
 - For assigned-only acceptance testing, prefer the Docker-based local Swarm workflow from the Portainer guide over host-run `pnpm dev`, `overmind`, or direct non-container app runs.
 
 ## Codex Worktree Workflow

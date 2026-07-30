@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Image tag to publish, for example v3.14.0-assigned-only-v1'
+        description: 'Image tag to publish, for example v4.12.1-assigned-only-v1'
         required: true
       platforms:
         description: 'Comma-separated target platforms'
